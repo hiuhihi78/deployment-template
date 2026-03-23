@@ -1,330 +1,220 @@
-# 🚀 Fullstack Docker + Nginx Environment Template
 
-This template helps you quickly set up a **Fullstack environment (Frontend + Backend + Nginx)** using Docker.  
-Suitable for bootstrapping new projects, architecture demos, or basic deployments.
+# Build and publish Application with Docker
+## Overview
+##### 🧭 System Architecture (FE + BE + Nginx)
+    ┌──────────────────────┐           ┌──────────────────────┐
+    │   FE (Docker Image)  │           │   BE (Docker Image)  │
+    └──────────┬───────────┘           └──────────┬───────────┘
+               │                                  │
+               │                                  │
+               │                                  │
+    ┌──────────▼──────────┐           ┌──────────▼──────────┐
+    │ Nginx (Docker - FE) │           │     Run CMD (BE)    │
+    └──────────┬──────────┘           └──────────┬──────────┘
+               │                                  │
+               │                                  │
+        FE:3000 (container)               BE:5000 (container)
+               │                                  │
+               │                                  │
+               └───────────────┬──────────────────┘
+                               │
+                               │
+                    ┌──────────▼──────────┐
+                    │    Nginx (Host)     │
+                    └──────────┬──────────┘
+                               │
+                ┌──────────────┴──────────────┐
+                │                             │
+                │                             │
+                ▼                             ▼
+           Frontend                       Backend API
+                │                             │
+                └──────────────┬──────────────┘
+                               │
+                               ▼
+                            Client
+ ### 📁 Project Structure
+ ```
+ project-root/  
+│  
+├── frontend/ # Frontend (React / Vue / ...)  
+│ ├── Dockerfile # Build Docker image for FE  
+│ ├── nginx.conf # Nginx config inside FE container  
+│ └── ... # Source code  
+│  
+├── backend/ # Backend (.NET / Node / ...)  
+│ ├── Dockerfile # Build Docker image for BE  
+│ └── ... # Source code  
+│  
+├── nginx/ # Nginx (Host)  
+│ ├── nginx.conf # Reverse proxy config (Host Nginx)  
+│ └── ssl/ # SSL certificates  
+│ ├── cert.pem  
+│ └── key.pem  
+│  
+├── compose.yaml # Docker Compose (run multiple services)  
+├── .env # Environment variables  
+ ```
+### Build and Config and Publish application
+1. Setting config (Dockerfile, nginx config, docker compose)
+2. Buid image FE, BE + Push Docker Hub
+3. Settubg config in VM
+    + Install Docker
+    + Install nginx
+    + Copy config file into VM (docker compose, ssl certificate, env)
+    + Config port
+4. Run docker compose
+### Setting detail
+#### 1. Setting config (Dockerfile, nginx config, docker compose)
+Note: Sample
 
----
+#### 2. Buid image FE, BE + Push Docker Hub)
+##### Build image
+```
+docker build -t <image_name>:<tag> -f <folder>
+docker tag <local_image> <dockerhub_username>/<repo_name>:<tag>
+docker push <dockerhub_username>/<repo_name>:<tag>
+```
+##### Push image
+```
+docker push <dockerhub_username>/<repo_name>:<tag>
+```
+#### 2. Settubg config in VM
+##### Install Docker
+```
+sudo apt remove docker docker-engine docker.io containerd runc
 
-## 📁 Project Structure
+sudo apt update
+sudo apt install -y ca-certificates curl gnupg
 
-```text
-.
-├── backend/
-│   └── Dockerfile          # Backend image build 
-│
-├── frontend/
-│   ├── Dockerfile          # Frontend build 
-│   └── nginx.conf          # Serve static files
-│
-├── nginx/
-│   ├── Dockerfile          # Nginx reverse proxy build
-│   └── nginx.conf          # Route FE + BE
-│
-├── .env                    # Environment variables
-├── docker-compose.yml      # System orchestration
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) \
+  signed-by=/etc/apt/keyrings/docker.gpg] \
+  https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+sudo usermod -aG docker $USER
+newgrp docker
+
+docker version
+docker compose version
+```
+##### Login Docker
+```
+docker login -u  (username)
+(password)
+```
+##### Install nginx
+```
+sudo apt update
+sudo apt install nginx -y
+
+sudo ufw allow 'Nginx Full'
+
+sudo systemctl start nginx
+sudo systemctl enable nginx
+sudo systemctl status nginx
 ```
 
----
-
-## 🧩 Architecture Overview
-
-```text
-Client → Nginx (port 80)
-           ↓
-   ┌───────────────┐
-   │               │
-Frontend       Backend
-:3000          :5000
+##### Copy config file into VM (docker compose, ssl certificate, env)
+######  Create project folder
+```
+mkdir (project-name)
+cd (project-name)
+```
+######  Create Docker compose file
+```
+nano docker-compose.yml
+```
+######  Create config folder nginx
+```
+mkdir ngnix
+cd ngnix
+nano nginx.conf
 ```
 
-- Nginx acts as a **reverse proxy**
-- Frontend serves static files
-- Backend handles APIs and realtime processing
+######  Create config folder ssl
+```
+mkdir ssl
+cd ssl
+nano cert.pem
+nano key.pem
 
----
+sudo mkdir -p /etc/nginx/ssl
+sudo cp /home/(username)/(project-foler)/nginx/ssl/cert.pem /etc/nginx/ssl
+sudo cp /home/(username)/(project-foler)/nginx/ssl/key.pem /etc/nginx/ssl
+sudo cp /home/(username)/(project-foler)/nginx/nginx.conf /etc/nginx/nginx.conf
 
-## ⚙️ How to Run the Project
+sudo nginx -t
 
-### 1. Clone the template
+sudo systemctl reload nginx
+sudo systemctl stop nginx 
+sudo systemctl start nginx 
+```
+#### 4. Run docker compose
+```
+docker compose -f docker-compose.yml up -d
+
+=== other command ===
+docker compose -f docker-compose.yml down
+docker image prune
+docker image prune -a
+docker rmi -f $(docker images -q)
+```
+
+#### Linux command sample
+#### Linux Basic Commands
 
 ```bash
-git clone <template-repo>
-cd <template-repo>
-```
-
----
-
-### 2. Add source code
-
-```bash
-# Frontend
-git clone <frontend-repo> frontend
-
-# Backend
-git clone <backend-repo> backend
-```
-
----
-
-### 3. Customize Dockerfiles
-
-Each service requires a Dockerfile based on your framework and build process.
-
-#### Frontend - React
-
-```bash
-npm install
-npm run build
-```
-
-```dockerfile
-FROM node:18 AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=build /app/build /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 3000
-```
-
----
-
-#### Frontend - Angular
-
-```bash
-npm install
-ng build --prod
-```
-
-```dockerfile
-FROM node:18 AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN ng build --prod
-
-FROM nginx:alpine
-COPY --from=build /app/dist/your-app /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 3000
-```
-
----
-
-#### Backend - .NET
-
-```bash
-dotnet restore
-dotnet publish -c Release -o out
-dotnet out/YourApp.dll
-```
-
-```dockerfile
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
-WORKDIR /app
-COPY *.sln ./
-COPY src ./src
-RUN dotnet restore
-RUN dotnet publish ./src/YourApp.csproj -c Release -o /app/publish
-
-FROM mcr.microsoft.com/dotnet/aspnet:7.0
-WORKDIR /app
-COPY --from=build /app/publish .
-EXPOSE 5000
-ENTRYPOINT ["dotnet", "YourApp.dll"]
-```
-
----
-
-#### Backend - Java (Maven)
-
-```bash
-mvn clean package
-java -jar target/app.jar
-```
-
-```dockerfile
-FROM maven:3.9-openjdk-17 AS build
-WORKDIR /app
-COPY pom.xml .
-COPY src ./src
-RUN mvn clean package -DskipTests
-
-FROM openjdk:17-jdk-alpine
-WORKDIR /app
-COPY --from=build /app/target/app.jar .
-EXPOSE 5000
-ENTRYPOINT ["java", "-jar", "app.jar"]
-```
-
----
-
-### 4. Build & Run
-
-```bash
-docker-compose up -d --build
-```
-
----
-
-### 5. Access
-
-- Frontend: http://localhost  
-- Backend API: http://localhost/api  
-
----
-
-# 🧪 Sample Build (Current Setup)
-
----
-
-## 🔹 Backend Service (.NET 7)
-
-```dockerfile
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
-WORKDIR /app
-
-COPY MeChat.sln ./
-COPY src ./src
-COPY test ./test
-
-RUN dotnet restore MeChat.sln
-
-RUN dotnet publish ./src/MeChat.API/MeChat.API.csproj \
-    -c Release \
-    -o /app/publish \
-    --no-restore
-
-FROM mcr.microsoft.com/dotnet/aspnet:7.0
-WORKDIR /app
-
-COPY --from=build /app/publish .
-
-ENV ASPNETCORE_URLS=http://+:5000
-ENV ASPNETCORE_ENVIRONMENT=Production
-
-EXPOSE 5000
-
-ENTRYPOINT ["dotnet", "MeChat.API.dll"]
-```
-
----
-
-## 🔹 Frontend Service (React + Nginx)
-
-```dockerfile
-FROM node:18 AS build
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm install
-
-COPY . .
-RUN npm run build
-
-FROM nginx:alpine
-
-COPY --from=build /app/build /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-EXPOSE 3000
-```
-
----
-
-## 🔹 Nginx Reverse Proxy
-
-```nginx
-events {}
-
-http {
-    server {
-        listen 80;
-
-        # FE
-		location / {
-			proxy_pass http://frontend:3000;
-
-			proxy_http_version 1.1;
-			proxy_set_header Upgrade $http_upgrade;
-			proxy_set_header Connection "upgrade";
-			proxy_set_header Host $host;
-		}
-
-		# BE
-		location /api/ {
-			proxy_pass http://backend:5000;
-
-			proxy_set_header Host $host;
-			proxy_set_header X-Real-IP $remote_addr;
-			proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-			proxy_set_header X-Forwarded-Proto $scheme;
-
-			# SignalR / WebSocket
-			proxy_set_header Upgrade $http_upgrade;
-			proxy_set_header Connection "upgrade";
-		}
-
-		location /realtime/ {
-			proxy_pass http://backend:5000;
-
-			proxy_set_header Host $host;
-			proxy_set_header X-Real-IP $remote_addr;
-			proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-			proxy_set_header X-Forwarded-Proto $scheme;
-
-			# SignalR / WebSocket
-			proxy_set_header Upgrade $http_upgrade;
-			proxy_set_header Connection "upgrade";
-		}		
-    }
-}
-
-```
-
----
-
-## 🔹 Environment Variables
-
-```env
-APP_NAME=test
-ENV=dev
-```
-
----
-
-## 🔹 Docker Compose
-
-```yaml
-version: "3.9"
-
-services:
-  backend:
-    build: ./backend
-    container_name: ${APP_NAME}-be
-    restart: always
-
-  frontend:
-    build: ./frontend
-    container_name: ${APP_NAME}-fe
-    restart: always
-
-  nginx:
-    image: nginx:alpine
-    container_name: ${APP_NAME}-nginx-${ENV}
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - backend
-      - frontend
-    restart: always
-```
-
----
+# 📂 Directory & Navigation
+pwd                 # Show current directory
+ls                  # List files and folders
+ls -l               # List with details
+cd /path/to/folder   # Change directory
+cd ..               # Go up one directory
+mkdir folder_name    # Create a new directory
+rmdir folder_name    # Remove an empty directory
+
+# 📄 File Operations
+touch file.txt       # Create an empty file
+cp source dest       # Copy file or folder
+mv source dest       # Move or rename file/folder
+rm file.txt          # Delete a file
+rm -r folder_name    # Delete folder recursively
+cat file.txt         # Show file content
+less file.txt        # View file content page by page
+nano file.txt        # Edit file in terminal
+
+# 🔍 Search & Info
+find . -name "file*"  # Search files by name
+grep "text" file.txt  # Search text inside file
+wc -l file.txt        # Count lines
+df -h                 # Disk usage
+du -sh folder_name    # Folder size
+
+# 🔧 Permissions
+chmod 755 file.txt     # Change file permissions
+chown user:group file  # Change file owner
+
+# 🖥 System Info
+whoami                 # Show current user
+uname -a               # Kernel info
+top                    # Real-time processes
+ps aux                 # Show running processes
+
+# 🐳 Docker Basic
+docker ps              # List running containers
+docker ps -a           # List all containers
+docker images          # List local images
+docker stop <id>       # Stop container
+docker rm <id>         # Remove container
+docker rmi <image>     # Remove image
