@@ -82,31 +82,36 @@ docker push <dockerhub_username>/<repo_name>:<tag>
 #### 2. Settubg config in VM
 ##### Install Docker
 ```
-sudo apt remove docker docker-engine docker.io containerd runc
+sudo apt remove -y docker docker-engine docker.io containerd runc
 
 sudo apt update
-sudo apt install -y ca-certificates curl gnupg
+sudo apt install -y ca-certificates curl gnupg lsb-release
 
-sudo install -m 0755 -d /etc/apt/keyrings
+sudo mkdir -p /etc/apt/keyrings
+
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
 sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
 sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
 echo \
-  "deb [arch=$(dpkg --print-architecture) \
-  signed-by=/etc/apt/keyrings/docker.gpg] \
-  https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
+"deb [arch=$(dpkg --print-architecture) \
+signed-by=/etc/apt/keyrings/docker.gpg] \
+https://download.docker.com/linux/ubuntu \
+$(lsb_release -cs) stable" | \
+sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+ 
 sudo apt update
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
+sudo systemctl enable docker
+sudo systemctl start docker
+
 sudo usermod -aG docker $USER
-newgrp docker
 
 docker version
 docker compose version
+docker run hello-world
 ```
 ##### Login Docker
 ```
@@ -128,17 +133,15 @@ sudo systemctl status nginx
 ##### Copy config file into VM (docker compose, ssl certificate, env)
 ######  Create project folder
 ```
-mkdir (project-name)
-cd (project-name)
-```
-######  Create Docker compose file
-```
+mkdir project
+cd project
 nano docker-compose.yml
+nano .env
 ```
 ######  Create config folder nginx
 ```
-mkdir ngnix
-cd ngnix
+mkdir nginx
+cd nginx
 nano nginx.conf
 ```
 
@@ -150,9 +153,10 @@ nano cert.pem
 nano key.pem
 
 sudo mkdir -p /etc/nginx/ssl
-sudo cp /home/(username)/(project-foler)/nginx/ssl/cert.pem /etc/nginx/ssl
-sudo cp /home/(username)/(project-foler)/nginx/ssl/key.pem /etc/nginx/ssl
-sudo cp /home/(username)/(project-foler)/nginx/nginx.conf /etc/nginx/nginx.conf
+
+sudo cp /home/(username)/project/nginx/ssl/cert.pem /etc/nginx/ssl
+sudo cp /home/(username)/project/nginx/ssl/key.pem /etc/nginx/ssl
+sudo cp /home/(username)/project/nginx/nginx.conf /etc/nginx/nginx.conf
 
 sudo nginx -t
 
@@ -163,6 +167,8 @@ sudo systemctl start nginx
 #### 4. Run docker compose
 ```
 docker compose -f docker-compose.yml up -d
+sudo docker compose -f docker-compose.yml up -d
+sudo usermod -aG docker $USER
 
 === other command ===
 docker compose -f docker-compose.yml down
