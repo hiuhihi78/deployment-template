@@ -2,34 +2,53 @@ version: "3.9"
 
 services:
   backend:
-    build: ./backend
+    image: ${DOCKER_HUB_USERNAME}/mechat-backend:${IMAGE_VERSION}
     container_name: ${APP_NAME}-be
     restart: always
+    ports:
+      - "5000:5000"
     networks:
       - default
+    
+  consumer:
+    image: ${DOCKER_HUB_USERNAME}/mechat-consumer:${IMAGE_VERSION}
+    container_name: ${APP_NAME}-consumer
+    restart: always
+    depends_on:
+      - rabbitmq
 
   frontend:
-    build: ./frontend
+    image: ${DOCKER_HUB_USERNAME}/mechat-frontend:${IMAGE_VERSION}
     container_name: ${APP_NAME}-fe
     restart: always
+    ports:
+      - "3000:3000"    
     networks:
       - default
 
-  nginx:
-    image: nginx:alpine
-    container_name: ${APP_NAME}-nginx-${ENV}
+  redis:
+    image: redis:7
+    container_name: ${APP_NAME}-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
     ports:
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - backend
-      - frontend
+      - "6379:6379"
     networks:
       - default
-    restart: always
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ${APP_NAME}-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST}
+    networks:
+      - default
 
 networks:
   default:
-    name: ${APP_NAME}-${ENV}-net
+    name: ${APP_NAME}-net
     driver: bridge
